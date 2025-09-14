@@ -7,22 +7,23 @@ import (
 )
 
 type Stat struct {
-	mu                 sync.Mutex
-	typ                string
-	name               string
-	leapsCount         int64
-	leapsCountSample   int64
-	totalTimeNs        int64
-	totalTimeSampleNs  int64
-	avgTimeSampleMs    float64
-	leapTimeMs         float64
-	minTimeMs          float64
-	minTimeSampleMs    float64
-	minTimeThresholdMs float64
-	maxTimeMs          float64
-	maxTimeSampleMs    float64
-	maxTimeThresholdMs float64
-	peersCount         atomic.Int64
+	mu                   sync.Mutex
+	typ                  string
+	name                 string
+	leapsCount           int64
+	leapsCountSample     int64
+	leapsCountThreshold  int64
+	totalTimeNs          int64
+	totalTimeThresholdNs int64
+	avgTimeSampleMs      float64
+	leapTimeMs           float64
+	minTimeMs            float64
+	minTimeSampleMs      float64
+	minTimeThresholdMs   float64
+	maxTimeMs            float64
+	maxTimeSampleMs      float64
+	maxTimeThresholdMs   float64
+	peersCount           atomic.Int64
 }
 
 func newStat(typ, name string) *Stat {
@@ -34,7 +35,7 @@ func (s *Stat) Reset() {
 	defer s.mu.Unlock()
 
 	s.totalTimeNs = 0
-	s.totalTimeSampleNs = 0
+	s.totalTimeThresholdNs = 0
 	s.maxTimeMs = 0
 	s.maxTimeSampleMs = 0
 	s.maxTimeThresholdMs = 0
@@ -43,6 +44,7 @@ func (s *Stat) Reset() {
 	s.minTimeThresholdMs = 0
 	s.leapsCount = 0
 	s.leapsCountSample = 0
+	s.leapsCountThreshold = 0
 }
 
 func (s *Stat) GetType() string {
@@ -62,6 +64,10 @@ func (s *Stat) GetFullName() string {
 
 func (s *Stat) GetLeapsCount() int64 {
 	return s.leapsCount
+}
+
+func (s *Stat) GetLeapsCountSample() int64 {
+	return s.leapsCountSample
 }
 
 func (s *Stat) GetTotalTimeMs() float64 {

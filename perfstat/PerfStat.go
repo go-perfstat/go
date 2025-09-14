@@ -63,13 +63,14 @@ func ForTypeNamePeriod(typ, name string, period int64) *PerfStat {
 
 func (p *PerfStat) Start() time.Time {
 	now := time.Now().UnixMilli()
-	if p.stat.leapsCountSample > 0 && now > p.lastAggregationMs+p.aggregationPeriodMs {
+	if p.stat.leapsCountThreshold > 0 && now > p.lastAggregationMs+p.aggregationPeriodMs {
 		p.stat.mu.Lock()
-		if p.stat.leapsCountSample > 0 && now > p.lastAggregationMs+p.aggregationPeriodMs {
+		if p.stat.leapsCountThreshold > 0 && now > p.lastAggregationMs+p.aggregationPeriodMs {
 			p.lastAggregationMs = now
-			p.stat.avgTimeSampleMs = Round(p.stat.totalTimeSampleNs / p.stat.leapsCountSample)
-			p.stat.leapsCountSample = 0
-			p.stat.totalTimeSampleNs = 0
+			p.stat.avgTimeSampleMs = Round(p.stat.totalTimeThresholdNs / p.stat.leapsCountThreshold)
+			p.stat.leapsCountSample = p.stat.leapsCountThreshold
+			p.stat.leapsCountThreshold = 0
+			p.stat.totalTimeThresholdNs = 0
 			p.stat.maxTimeSampleMs = p.stat.maxTimeThresholdMs
 			p.stat.maxTimeThresholdMs = 0
 			p.stat.minTimeSampleMs = p.stat.minTimeThresholdMs
@@ -89,7 +90,7 @@ func (p *PerfStat) Stop(start time.Time) int64 {
 
 	p.stat.leapTimeMs = timeMs
 	p.stat.totalTimeNs += timeNs
-	p.stat.totalTimeSampleNs += timeNs
+	p.stat.totalTimeThresholdNs += timeNs
 
 	if timeMs > p.stat.maxTimeMs {
 		p.stat.maxTimeMs = timeMs
@@ -104,7 +105,7 @@ func (p *PerfStat) Stop(start time.Time) int64 {
 		p.stat.minTimeThresholdMs = timeMs
 	}
 	p.stat.leapsCount++
-	p.stat.leapsCountSample++
+	p.stat.leapsCountThreshold++
 
 	return timeNs
 }

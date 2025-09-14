@@ -2,6 +2,7 @@ package perfstat_test
 
 import (
 	"fmt"
+	"runtime"
 	"sync"
 	"testing"
 	"time"
@@ -26,10 +27,16 @@ func TestPerfStatBasic(t *testing.T) {
 
 	stat := perf.GetStat()
 
+	// snapshot
+	assert.Equal(t, stat.GetPeersCount(), int64(1))
+	runtime.GC()
+	assert.Equal(t, stat.GetPeersCount(), int64(0))
+
 	// previous aggregation period
 	assert.GreaterOrEqual(t, stat.GetMinTimeSampleMs(), float64(1))
 	assert.Greater(t, stat.GetAvgTimeSampleMs(), float64(1))
 	assert.Greater(t, stat.GetMaxTimeSampleMs(), float64(1))
+	assert.LessOrEqual(t, stat.GetLeapsCountSample(), int64(1000))
 
 	// grand total
 	assert.GreaterOrEqual(t, stat.GetMinTimeMs(), float64(1))
