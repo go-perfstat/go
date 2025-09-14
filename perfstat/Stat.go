@@ -12,8 +12,8 @@ type Stat struct {
 	name               string
 	leapsCount         int64
 	leapsCountSample   int64
-	totalTimeNs        float64
-	totalTimeSampleNs  float64
+	totalTimeNs        int64
+	totalTimeSampleNs  int64
 	avgTimeSampleMs    float64
 	leapTimeMs         float64
 	minTimeMs          float64
@@ -92,7 +92,7 @@ func (s *Stat) GetAvgTimeMs() float64 {
 	if s.leapsCount == 0 {
 		return 0
 	}
-	return Round(s.totalTimeNs / float64(s.leapsCount))
+	return Round(s.totalTimeNs / s.leapsCount)
 }
 
 func (s *Stat) GetAvgTimeSampleMs() float64 {

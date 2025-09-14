@@ -20,8 +20,8 @@ var stats = concurrent.NewHashMap[string, *concurrent.ConcurrentHashMap[string, 
 // Use in method
 //
 //	t := perf.Start()
-//	...
-//	perf.Stop(t)
+//	... calculations
+//	fmt.Printf("%f ms\n", perfstat.Round(perf.Stop(t)))
 //
 // Once per aggregation time period flush samples somethere for Graphana to pick-up
 type PerfStat struct {
@@ -67,7 +67,7 @@ func (p *PerfStat) Start() time.Time {
 		p.stat.mu.Lock()
 		if p.stat.leapsCountSample > 0 && now > p.lastAggregationMs+p.aggregationPeriodMs {
 			p.lastAggregationMs = now
-			p.stat.avgTimeSampleMs = Round(p.stat.totalTimeSampleNs / float64(p.stat.leapsCountSample))
+			p.stat.avgTimeSampleMs = Round(p.stat.totalTimeSampleNs / p.stat.leapsCountSample)
 			p.stat.leapsCountSample = 0
 			p.stat.totalTimeSampleNs = 0
 			p.stat.maxTimeSampleMs = p.stat.maxTimeThresholdMs
@@ -82,14 +82,14 @@ func (p *PerfStat) Start() time.Time {
 
 func (p *PerfStat) Stop(start time.Time) int64 {
 	timeNs := time.Since(start).Nanoseconds()
-	timeMs := Round(float64(timeNs))
+	timeMs := Round(timeNs)
 
 	p.stat.mu.Lock()
 	defer p.stat.mu.Unlock()
 
 	p.stat.leapTimeMs = timeMs
-	p.stat.totalTimeNs += float64(timeNs)
-	p.stat.totalTimeSampleNs += float64(timeNs)
+	p.stat.totalTimeNs += timeNs
+	p.stat.totalTimeSampleNs += timeNs
 
 	if timeMs > p.stat.maxTimeMs {
 		p.stat.maxTimeMs = timeMs
@@ -211,8 +211,8 @@ func ResetAll() {
 }
 
 // returns #.### ms
-func Round(nanos float64) float64 {
+func Round(nanos int64) float64 {
 	scale := 1000.0
 	nsInMs := 1_000_000.0
-	return math.Round(nanos*scale/nsInMs) / scale
+	return math.Round(float64(nanos)*scale/nsInMs) / scale
 }
