@@ -105,6 +105,7 @@ func (p *PerfStat) Stop(start time.Time) int64 {
 	}
 	p.stat.leapsCount++
 	p.stat.leapsCountSample++
+	p.stat.addSampleMs(timeMs)
 
 	return timeNs
 }

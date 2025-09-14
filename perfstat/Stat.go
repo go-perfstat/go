@@ -2,6 +2,7 @@ package perfstat
 
 import (
 	"fmt"
+	"math"
 	"sync"
 	"sync/atomic"
 )
@@ -23,16 +24,23 @@ type Stat struct {
 	maxTimeSampleMs    float64
 	maxTimeThresholdMs float64
 	peersCount         atomic.Int64
+	// fields for approximate percentiles
+	binCounts map[int64]int64 // ms -> count
+	binMinMs  int64
+	binMaxMs  int64
 }
 
 func newStat(typ, name string) *Stat {
-	return &Stat{typ: typ, name: name}
+	return &Stat{
+		typ:       typ,
+		name:      name,
+		binCounts: make(map[int64]int64),
+	}
 }
 
 func (s *Stat) Reset() {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-
 	s.totalTimeNs = 0
 	s.totalTimeSampleNs = 0
 	s.maxTimeMs = 0
@@ -43,6 +51,9 @@ func (s *Stat) Reset() {
 	s.minTimeThresholdMs = 0
 	s.leapsCount = 0
 	s.leapsCountSample = 0
+	s.binCounts = make(map[int64]int64)
+	s.binMinMs = 0
+	s.binMaxMs = 0
 }
 
 func (s *Stat) GetType() string {
@@ -103,6 +114,49 @@ func (s *Stat) GetPeersCount() int64 {
 	return s.peersCount.Load()
 }
 
+// Approximate percentiles
+func (s *Stat) Percentiles() (p50, p90, p99 float64) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	total := int64(0)
+	for _, c := range s.binCounts {
+		total += c
+	}
+	if total == 0 {
+		return 0, 0, 0
+	}
+
+	percentile := func(q float64) float64 {
+		target := int64(math.Ceil(q * float64(total)))
+		count := int64(0)
+		for i := s.binMinMs; i <= s.binMaxMs; i++ {
+			count += s.binCounts[i]
+			if count >= target {
+				return float64(i)
+			}
+		}
+		return float64(s.binMaxMs)
+	}
+
+	return percentile(0.50), percentile(0.90), percentile(0.99)
+}
+
 func (s *Stat) String() string {
 	return fmt.Sprintf("%.2f %.2f %.2f", s.minTimeMs, s.GetAvgTimeMs(), s.maxTimeMs)
+}
+
+func (s *Stat) addSampleMs(timeMs float64) {
+	bin := int64(math.Floor(timeMs))
+	s.binCounts[bin]++
+	if len(s.binCounts) == 1 {
+		s.binMinMs = bin
+		s.binMaxMs = bin
+	} else {
+		if bin < s.binMinMs {
+			s.binMinMs = bin
+		}
+		if bin > s.binMaxMs {
+			s.binMaxMs = bin
+		}
+	}
 }
