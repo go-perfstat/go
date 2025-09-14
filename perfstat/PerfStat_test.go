@@ -19,9 +19,9 @@ func TestPerfStatBasic(t *testing.T) {
 
 	perf.Start()
 	for i := 0; i < 1000; i++ {
-		perf.Start()
+		t := perf.Start()
 		time.Sleep(time.Millisecond)
-		perf.Stop()
+		perf.Stop(t)
 	}
 
 	stat := perf.GetStat()
@@ -37,7 +37,6 @@ func TestPerfStatBasic(t *testing.T) {
 	assert.Greater(t, stat.GetMaxTimeMs(), float64(1))
 	assert.Greater(t, stat.GetTotalTimeMs(), float64(1000))
 	assert.Equal(t, stat.GetLeapsCount(), int64(1000))
-	assert.Equal(t, int64(1), stat.GetFailedLeapsCount())
 }
 
 func TestPerfStatConcurrent(t *testing.T) {
@@ -52,9 +51,9 @@ func TestPerfStatConcurrent(t *testing.T) {
 			defer wg.Done()
 			perf := perfstat.ForName("concurrent")
 			for j := 0; j < iterations; j++ {
-				perf.Start()
+				t := perf.Start()
 				time.Sleep(1 * time.Millisecond)
-				perf.Stop()
+				perf.Stop(t)
 			}
 		}()
 	}
@@ -72,11 +71,11 @@ func TestPerfStatPerformance(t *testing.T) {
 	benchmark := perfstat.ForName("benchmark")
 	perf := perfstat.ForName("benchmark_test")
 
-	benchmark.Start()
+	bt := benchmark.Start()
 	for i := 0; i < iterations; i++ {
-		perf.Start()
-		perf.Stop()
+		t := perf.Start()
+		perf.Stop(t)
 	}
-	totalNs := benchmark.Stop()
-	fmt.Printf("Average leap time: %d ns\n", totalNs/int64(iterations)) // ~ 220 ns
+	totalNs := benchmark.Stop(bt)
+	fmt.Printf("Average leap time: %d ns\n", totalNs/int64(iterations)) // ~ 190 ns
 }

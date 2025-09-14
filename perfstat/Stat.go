@@ -12,7 +12,6 @@ type Stat struct {
 	name               string
 	leapsCount         int64
 	leapsCountSample   int64
-	failedLeapsCount   int64
 	totalTimeNs        float64
 	totalTimeSampleNs  float64
 	avgTimeSampleMs    float64
@@ -63,10 +62,6 @@ func (s *Stat) GetFullName() string {
 
 func (s *Stat) GetLeapsCount() int64 {
 	return s.leapsCount
-}
-
-func (s *Stat) GetFailedLeapsCount() int64 {
-	return s.failedLeapsCount
 }
 
 func (s *Stat) GetTotalTimeMs() float64 {

@@ -13,19 +13,18 @@ var stats = concurrent.NewHashMap[string, *concurrent.ConcurrentHashMap[string, 
 
 // Record/calculate performance statistic for aggregation period and grand total.
 //
-// Create once for a component
+// Create an instance per component
 //
 //	perf := perfstat.ForName("domain")
 //
 // Use in method
 //
-//	perf.Start()
+//	t := perf.Start()
 //	...
-//	perf.Stop()
+//	perf.Stop(t)
 //
 // Once per aggregation time period flush samples somethere for Graphana to pick-up
 type PerfStat struct {
-	stopWatch           *StopWatch
 	stat                *Stat
 	lastAggregationMs   int64
 	aggregationPeriodMs int64
@@ -52,7 +51,6 @@ func ForTypeNamePeriod(typ, name string, period int64) *PerfStat {
 	}
 	stat.peersCount.Add(1)
 	perfStat := &PerfStat{
-		stopWatch:           newStopWatch(),
 		stat:                stat,
 		lastAggregationMs:   time.Now().UnixMilli(),
 		aggregationPeriodMs: period,
@@ -63,13 +61,7 @@ func ForTypeNamePeriod(typ, name string, period int64) *PerfStat {
 	return perfStat
 }
 
-func (p *PerfStat) Start() *PerfStat {
-	if p.stopWatch.Started {
-		p.stat.mu.Lock()
-		p.stat.failedLeapsCount++
-		p.stat.mu.Unlock()
-	}
-
+func (p *PerfStat) Start() time.Time {
 	now := time.Now().UnixMilli()
 	if p.stat.leapsCountSample > 0 && now > p.lastAggregationMs+p.aggregationPeriodMs {
 		p.stat.mu.Lock()
@@ -85,15 +77,11 @@ func (p *PerfStat) Start() *PerfStat {
 		}
 		p.stat.mu.Unlock()
 	}
-
-	p.stopWatch.Reset()
-	p.stopWatch.Start()
-	return p
+	return time.Now()
 }
 
-func (p *PerfStat) Stop() int64 {
-	p.stopWatch.Stop()
-	timeNs := p.stopWatch.ElapsedNs()
+func (p *PerfStat) Stop(start time.Time) int64 {
+	timeNs := time.Since(start).Nanoseconds()
 	timeMs := Round(float64(timeNs))
 
 	p.stat.mu.Lock()
