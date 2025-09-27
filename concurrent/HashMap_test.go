@@ -7,7 +7,7 @@ import (
 	"github.com/go-perfstat/go/concurrent"
 )
 
-func TestConcurrentHashMapBasic(t *testing.T) {
+func TestHashMapBasic(t *testing.T) {
 	m := concurrent.NewHashMap[string, int]()
 
 	// Put / Get
@@ -60,8 +60,9 @@ func TestConcurrentHashMapBasic(t *testing.T) {
 
 	// ForEach
 	sum := 0
-	m.ForEach(func(k string, v int) {
+	m.ForEach(func(k string, v int) bool {
 		sum += v
+		return true
 	})
 	if sum != 10+30 {
 		t.Errorf("expected sum 40, got %d", sum)
@@ -74,7 +75,7 @@ func TestConcurrentHashMapBasic(t *testing.T) {
 	}
 }
 
-func TestConcurrentHashMapConcurrent(t *testing.T) {
+func TestHashMapConcurrent(t *testing.T) {
 	m := concurrent.NewHashMap[int, int]()
 	wg := sync.WaitGroup{}
 	const num = 1000
@@ -122,7 +123,7 @@ func TestConcurrentHashMapConcurrent(t *testing.T) {
 	}
 }
 
-func TestConcurrentHashMapMerge(t *testing.T) {
+func TestHashMapMerge(t *testing.T) {
 	a := concurrent.NewHashMap[string, int]()
 	b := concurrent.NewHashMap[string, int]()
 
@@ -134,9 +135,10 @@ func TestConcurrentHashMapMerge(t *testing.T) {
 	a.Merge(b)
 
 	expected := map[string]int{"x": 1, "y": 20, "z": 3}
-	a.ForEach(func(k string, v int) {
+	a.ForEach(func(k string, v int) bool {
 		if expected[k] != v {
 			t.Errorf("expected key %s to have value %d, got %d", k, expected[k], v)
 		}
+		return true
 	})
 }

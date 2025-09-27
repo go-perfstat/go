@@ -10,33 +10,35 @@ import (
 
 const numBuckets = 16
 
+type entry[K comparable, V any] struct {
+	k K
+	v V
+}
+
 type bucket[K comparable, V any] struct {
 	mu   sync.RWMutex
 	data map[K]V
 }
 
-type ConcurrentHashMap[K comparable, V any] struct {
+type HashMap[K comparable, V any] struct {
 	buckets [numBuckets]*bucket[K, V]
 	size    atomic.Int64
 }
 
-func NewHashMap[K comparable, V any]() *ConcurrentHashMap[K, V] {
-	m := &ConcurrentHashMap[K, V]{}
+func NewHashMap[K comparable, V any]() *HashMap[K, V] {
+	m := &HashMap[K, V]{}
 	for i := 0; i < numBuckets; i++ {
 		m.buckets[i] = &bucket[K, V]{data: make(map[K]V)}
 	}
 	return m
 }
 
-func (m *ConcurrentHashMap[K, V]) ContainsKey(key K) bool {
-	b := m.getBucket(key)
-	b.mu.RLock()
-	defer b.mu.RUnlock()
-	_, ok := b.data[key]
+func (m *HashMap[K, V]) ContainsKey(key K) bool {
+	_, ok := m.Get(key)
 	return ok
 }
 
-func (m *ConcurrentHashMap[K, V]) Get(key K) (V, bool) {
+func (m *HashMap[K, V]) Get(key K) (V, bool) {
 	b := m.getBucket(key)
 	b.mu.RLock()
 	defer b.mu.RUnlock()
@@ -44,7 +46,7 @@ func (m *ConcurrentHashMap[K, V]) Get(key K) (V, bool) {
 	return val, ok
 }
 
-func (m *ConcurrentHashMap[K, V]) Put(key K, value V) {
+func (m *HashMap[K, V]) Put(key K, value V) {
 	b := m.getBucket(key)
 	b.mu.Lock()
 	defer b.mu.Unlock()
@@ -53,7 +55,8 @@ func (m *ConcurrentHashMap[K, V]) Put(key K, value V) {
 	}
 	b.data[key] = value
 }
-func (m *ConcurrentHashMap[K, V]) PutIfAbsent(key K, value V) V {
+
+func (m *HashMap[K, V]) PutIfAbsent(key K, value V) V {
 	b := m.getBucket(key)
 	b.mu.Lock()
 	defer b.mu.Unlock()
@@ -65,7 +68,7 @@ func (m *ConcurrentHashMap[K, V]) PutIfAbsent(key K, value V) V {
 	return value
 }
 
-func (m *ConcurrentHashMap[K, V]) Replace(key K, newValue V) bool {
+func (m *HashMap[K, V]) Replace(key K, newValue V) bool {
 	b := m.getBucket(key)
 	b.mu.Lock()
 	defer b.mu.Unlock()
@@ -76,7 +79,7 @@ func (m *ConcurrentHashMap[K, V]) Replace(key K, newValue V) bool {
 	return false
 }
 
-func (m *ConcurrentHashMap[K, V]) Remove(key K) {
+func (m *HashMap[K, V]) Remove(key K) {
 	b := m.getBucket(key)
 	b.mu.Lock()
 	defer b.mu.Unlock()
@@ -86,7 +89,7 @@ func (m *ConcurrentHashMap[K, V]) Remove(key K) {
 	}
 }
 
-func (m *ConcurrentHashMap[K, V]) Clear() {
+func (m *HashMap[K, V]) Clear() {
 	for i := 0; i < numBuckets; i++ {
 		b := m.buckets[i]
 		b.mu.Lock()
@@ -96,7 +99,7 @@ func (m *ConcurrentHashMap[K, V]) Clear() {
 	m.size.Store(0)
 }
 
-func (m *ConcurrentHashMap[K, V]) Merge(other *ConcurrentHashMap[K, V]) {
+func (m *HashMap[K, V]) Merge(other *HashMap[K, V]) {
 	for i := 0; i < numBuckets; i++ {
 		otherBucket := other.buckets[i]
 		otherBucket.mu.RLock()
@@ -107,11 +110,15 @@ func (m *ConcurrentHashMap[K, V]) Merge(other *ConcurrentHashMap[K, V]) {
 	}
 }
 
-func (m *ConcurrentHashMap[K, V]) Size() int {
+func (m *HashMap[K, V]) Size() int {
 	return int(m.size.Load())
 }
 
-func (m *ConcurrentHashMap[K, V]) Keys() []K {
+func (m *HashMap[K, V]) IsEmpty() bool {
+	return m.size.Load() == 0
+}
+
+func (m *HashMap[K, V]) Keys() []K {
 	keys := make([]K, 0)
 	for i := 0; i < numBuckets; i++ {
 		b := m.buckets[i]
@@ -124,7 +131,7 @@ func (m *ConcurrentHashMap[K, V]) Keys() []K {
 	return keys
 }
 
-func (m *ConcurrentHashMap[K, V]) Values() []V {
+func (m *HashMap[K, V]) Values() []V {
 	values := make([]V, 0)
 	for i := 0; i < numBuckets; i++ {
 		b := m.buckets[i]
@@ -137,22 +144,37 @@ func (m *ConcurrentHashMap[K, V]) Values() []V {
 	return values
 }
 
-func (m *ConcurrentHashMap[K, V]) ForEach(f func(K, V)) {
+func (m *HashMap[K, V]) ForEach(callback func(key K, value V) bool) {
 	for i := 0; i < numBuckets; i++ {
 		b := m.buckets[i]
 		b.mu.RLock()
+		items := make([]entry[K, V], 0, len(b.data))
 		for k, v := range b.data {
-			f(k, v)
+			items = append(items, entry[K, V]{k, v})
 		}
 		b.mu.RUnlock()
+		for _, it := range items {
+			if !callback(it.k, it.v) {
+				return
+			}
+		}
 	}
 }
 
-func (m *ConcurrentHashMap[K, V]) getBucket(key K) *bucket[K, V] {
+func (m *HashMap[K, V]) Snapshot() map[K]V {
+	out := make(map[K]V, m.Size())
+	m.ForEach(func(k K, v V) bool {
+		out[k] = v
+		return true
+	})
+	return out
+}
+
+func (m *HashMap[K, V]) getBucket(key K) *bucket[K, V] {
 	return m.buckets[m.hashCode(key)%numBuckets]
 }
 
-func (m *ConcurrentHashMap[K, V]) hashCode(key K) uint32 {
+func (m *HashMap[K, V]) hashCode(key K) uint32 {
 	h := fnv.New32a()
 	switch v := any(key).(type) {
 	case string:
