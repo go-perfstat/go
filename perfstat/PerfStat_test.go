@@ -84,5 +84,5 @@ func TestPerfStatPerformance(t *testing.T) {
 		perf.Stop(t)
 	}
 	totalNs := benchmark.Stop(bt)
-	fmt.Printf("Average leap time: %d ns\n", totalNs/int64(iterations)) // ~ 190 ns
+	fmt.Printf("Average leap time: %d ns\n", totalNs/int64(iterations)) // ~ 180 ns
 }

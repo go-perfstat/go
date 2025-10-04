@@ -62,11 +62,12 @@ func ForTypeNamePeriod(typ, name string, period int64) *PerfStat {
 }
 
 func (p *PerfStat) Start() time.Time {
-	now := time.Now().UnixMilli()
-	if p.stat.leapsCountThreshold > 0 && now > p.lastAggregationMs+p.aggregationPeriodMs {
+	now := time.Now()
+	unixMilli := now.UnixMilli()
+	if p.stat.leapsCountThreshold > 0 && unixMilli > p.lastAggregationMs+p.aggregationPeriodMs {
 		p.stat.mu.Lock()
-		if p.stat.leapsCountThreshold > 0 && now > p.lastAggregationMs+p.aggregationPeriodMs {
-			p.lastAggregationMs = now
+		if p.stat.leapsCountThreshold > 0 && unixMilli > p.lastAggregationMs+p.aggregationPeriodMs {
+			p.lastAggregationMs = unixMilli
 			p.stat.avgTimeSampleMs = Round(p.stat.totalTimeThresholdNs / p.stat.leapsCountThreshold)
 			p.stat.leapsCountSample = p.stat.leapsCountThreshold
 			p.stat.leapsCountThreshold = 0
@@ -78,7 +79,7 @@ func (p *PerfStat) Start() time.Time {
 		}
 		p.stat.mu.Unlock()
 	}
-	return time.Now()
+	return now
 }
 
 func (p *PerfStat) Stop(start time.Time) int64 {
