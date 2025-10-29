@@ -22,7 +22,7 @@ Expose metrics using prometheus or deliver statistic report at the end of the fl
 
 	prometheus.MustRegister(NewPerfStatMetricsCollector())
 
-> Default aggregation period is 5s
+> Default aggregation period is 15s (Grafana defaults)
 
 ### Print all stats before exit
 
