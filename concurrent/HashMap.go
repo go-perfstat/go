@@ -196,7 +196,7 @@ func (m *HashMap[K, V]) hashCode(key K) uint32 {
 		binary.LittleEndian.PutUint32(buf[:], v)
 		h.Write(buf[:])
 	default:
-		h.Write([]byte(fmt.Sprintf("%v", key)))
+		h.Write([]byte(fmt.Sprint(key)))
 	}
 	return h.Sum32()
 }
