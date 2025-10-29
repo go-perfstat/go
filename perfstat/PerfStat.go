@@ -8,7 +8,7 @@ import (
 	"github.com/go-perfstat/go/concurrent"
 )
 
-var defaultAggregationPeriodMs int64 = 5000
+var defaultAggregationPeriodMs int64 = 15000
 var stats = concurrent.NewHashMap[string, *concurrent.HashMap[string, *Stat]]()
 
 // Record/calculate performance statistic for aggregation period and grand total.
