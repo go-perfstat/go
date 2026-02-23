@@ -17,12 +17,15 @@ Expose metrics using prometheus or deliver statistic report at the end of the fl
     ...
     perf.Stop(t)
 
-
 ### Register in prometheus
 
 	prometheus.MustRegister(NewPerfStatMetricsCollector())
 
 > Default aggregation period is 15s
+
+### Expose as Grafana dashboard
+
+	[PerfStat Grafana Dashboard](https://github.com/go-perfstat/go/blob/main/prometheus/PerfStatGrafanaDashboard.json)
 
 ### Print all stats before exit
 
