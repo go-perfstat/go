@@ -1,8 +1,11 @@
 package perfstat
 
 import (
+	"fmt"
 	"math"
 	"runtime"
+	"sort"
+	"strings"
 	"time"
 
 	"github.com/go-perfstat/go/concurrent"
@@ -26,7 +29,6 @@ var stats = concurrent.NewHashMap[string, *concurrent.HashMap[string, *Stat]]()
 // Once per aggregation time period flush samples somethere for Graphana to pick-up
 type PerfStat struct {
 	stat                *Stat
-	lastAggregationMs   int64
 	aggregationPeriodMs int64
 }
 
@@ -39,20 +41,19 @@ func ForTypeName(typ, name string) *PerfStat {
 }
 
 func ForTypeNamePeriod(typ, name string, period int64) *PerfStat {
-	innerMap, ok := stats.Get(typ)
-	if !ok {
+	innerMap := stats.Get(typ)
+	if innerMap == nil {
 		innerMap = concurrent.NewHashMap[string, *Stat]()
 		innerMap = stats.PutIfAbsent(typ, innerMap)
 	}
-	stat, ok := innerMap.Get(name)
-	if !ok || stat == nil {
+	stat := innerMap.Get(name)
+	if stat == nil {
 		stat = newStat(typ, name)
 		stat = innerMap.PutIfAbsent(name, stat)
 	}
 	stat.peersCount.Add(1)
 	perfStat := &PerfStat{
 		stat:                stat,
-		lastAggregationMs:   time.Now().UnixMilli(),
 		aggregationPeriodMs: period,
 	}
 	runtime.SetFinalizer(perfStat, func(p *PerfStat) {
@@ -61,74 +62,75 @@ func ForTypeNamePeriod(typ, name string, period int64) *PerfStat {
 	return perfStat
 }
 
-func (p *PerfStat) Start() time.Time {
+func (this *PerfStat) Start() time.Time {
 	return time.Now()
 }
 
-func (p *PerfStat) Stop(start time.Time) int64 {
+func (this *PerfStat) Stop(start time.Time) int64 {
 	now := time.Now()
 	timeNs := now.Sub(start).Nanoseconds()
 	timeMs := Round(timeNs)
 
-	p.stat.mu.Lock()
-	defer p.stat.mu.Unlock()
+	this.stat.mu.Lock()
+	defer this.stat.mu.Unlock()
 
-	p.stat.leapTimeMs = timeMs
-	p.stat.totalTimeNs += timeNs
-	p.stat.totalTimeThresholdNs += timeNs
+	this.stat.leapTimeMs = timeMs
+	this.stat.totalTimeNs += timeNs
+	this.stat.totalTimeThresholdNs += timeNs
 
-	if timeMs > p.stat.maxTimeMs {
-		p.stat.maxTimeMs = timeMs
+	if timeMs > this.stat.maxTimeMs {
+		this.stat.maxTimeMs = timeMs
 	}
-	if timeMs > p.stat.maxTimeThresholdMs {
-		p.stat.maxTimeThresholdMs = timeMs
+	if timeMs > this.stat.maxTimeThresholdMs {
+		this.stat.maxTimeThresholdMs = timeMs
 	}
-	if timeMs < p.stat.minTimeMs || p.stat.minTimeMs == 0 {
-		p.stat.minTimeMs = timeMs
+	if timeMs < this.stat.minTimeMs || this.stat.minTimeMs == 0 {
+		this.stat.minTimeMs = timeMs
 	}
-	if timeMs < p.stat.minTimeThresholdMs || p.stat.minTimeThresholdMs == 0 {
-		p.stat.minTimeThresholdMs = timeMs
+	if timeMs < this.stat.minTimeThresholdMs || this.stat.minTimeThresholdMs == 0 {
+		this.stat.minTimeThresholdMs = timeMs
 	}
-	p.stat.leapsCount++
-	p.stat.leapsCountThreshold++
+	this.stat.leapsCount++
+	this.stat.leapsCountThreshold++
 
 	nowUnixMilli := now.UnixMilli()
-	if nowUnixMilli > p.lastAggregationMs+p.aggregationPeriodMs {
-		p.lastAggregationMs = nowUnixMilli
-		p.stat.avgTimeSampleMs = Round(p.stat.totalTimeThresholdNs / p.stat.leapsCountThreshold)
-		p.stat.leapsCountSample = p.stat.leapsCountThreshold
-		p.stat.leapsCountThreshold = 0
-		p.stat.totalTimeThresholdNs = 0
-		p.stat.maxTimeSampleMs = p.stat.maxTimeThresholdMs
-		p.stat.maxTimeThresholdMs = 0
-		p.stat.minTimeSampleMs = p.stat.minTimeThresholdMs
-		p.stat.minTimeThresholdMs = 0
+	if nowUnixMilli > this.stat.lastAggregationMs+this.aggregationPeriodMs {
+		this.stat.lastAggregationMs = nowUnixMilli
+		this.stat.avgTimeSampleMs = Round(this.stat.totalTimeThresholdNs / this.stat.leapsCountThreshold)
+		this.stat.leapsCountSample = this.stat.leapsCountThreshold
+		this.stat.leapsCountThreshold = 0
+		this.stat.totalTimeThresholdNs = 0
+		this.stat.maxTimeSampleMs = this.stat.maxTimeThresholdMs
+		this.stat.maxTimeThresholdMs = 0
+		this.stat.minTimeSampleMs = this.stat.minTimeThresholdMs
+		this.stat.minTimeThresholdMs = 0
 	}
+
 	return timeNs
 }
 
-func (p *PerfStat) Reset() {
-	p.stat.Reset()
+func (this *PerfStat) Reset() {
+	this.stat.Reset()
 }
 
-func (p *PerfStat) GetStat() *Stat {
-	return p.stat
+func (this *PerfStat) GetStat() *Stat {
+	return this.stat
 }
 
-func (p *PerfStat) GetType() string {
-	return p.stat.GetType()
+func (this *PerfStat) GetType() string {
+	return this.stat.GetType()
 }
 
-func (p *PerfStat) GetName() string {
-	return p.stat.GetName()
+func (this *PerfStat) GetName() string {
+	return this.stat.GetName()
 }
 
-func (p *PerfStat) GetFullName() string {
-	return p.stat.GetFullName()
+func (this *PerfStat) GetFullName() string {
+	return this.stat.GetFullName()
 }
 
-func (p *PerfStat) String() string {
-	return p.stat.String()
+func (this *PerfStat) String() string {
+	return this.stat.String()
 }
 
 func GetDefaultAggregationPeriodMs() int64 {
@@ -144,25 +146,20 @@ func GetByName(name string) *Stat {
 }
 
 func GetByTypeName(typ, name string) *Stat {
-	innerMap, ok := stats.Get(typ)
-	if !ok {
+	innerMap := stats.Get(typ)
+	if innerMap == nil {
 		return nil
 	}
-	st, ok := innerMap.Get(name)
-	if !ok {
-		return nil
-	}
-	return st
+	return innerMap.Get(name)
 }
 
 func GetAll() map[string]map[string]*Stat {
 	result := make(map[string]map[string]*Stat)
 	for _, typ := range stats.Keys() {
-		innerMap, _ := stats.Get(typ)
+		innerMap := stats.Get(typ)
 		copyMap := make(map[string]*Stat)
 		for _, name := range innerMap.Keys() {
-			st, _ := innerMap.Get(name)
-			copyMap[name] = st
+			copyMap[name] = innerMap.Get(name)
 		}
 		result[typ] = copyMap
 	}
@@ -171,15 +168,15 @@ func GetAll() map[string]map[string]*Stat {
 
 func Merge(rhs map[string]map[string]*Stat) {
 	for typ, rhsStats := range rhs {
-		innerMap, ok := stats.Get(typ)
-		if !ok {
+		innerMap := stats.Get(typ)
+		if innerMap == nil {
 			innerMap = concurrent.NewHashMap[string, *Stat]()
 			stats.Put(typ, innerMap)
 		}
 
 		for name, rhsStat := range rhsStats {
-			existing, ok := innerMap.Get(name)
-			if !ok || existing == nil {
+			existing := innerMap.Get(name)
+			if existing == nil {
 				innerMap.Put(name, rhsStat)
 				continue
 			}
@@ -198,12 +195,26 @@ func Merge(rhs map[string]map[string]*Stat) {
 	}
 }
 
+func RemoveByType(typ string) {
+	stats.Remove(typ)
+}
+
+func RemoveByName(name string) {
+	RemoveByTypeName("", name)
+}
+
+func RemoveByTypeName(typ, name string) {
+	innerMap := stats.Get(typ)
+	if innerMap != nil {
+		innerMap.Remove(name)
+	}
+}
+
 func ResetAll() {
 	for _, typ := range stats.Keys() {
-		innerMap, _ := stats.Get(typ)
+		innerMap := stats.Get(typ)
 		for _, name := range innerMap.Keys() {
-			st, _ := innerMap.Get(name)
-			st.Reset()
+			innerMap.Get(name).Reset()
 		}
 	}
 }
@@ -213,4 +224,27 @@ func Round(nanos int64) float64 {
 	scale := 1000.0
 	nsInMs := 1_000_000.0
 	return math.Round(float64(nanos)*scale/nsInMs) / scale
+}
+
+func Print() {
+	fmt.Printf("%-70s %10s %10s %10s %15s %10s %9s\n", "Type/Name", "Min(ms)", "Avg(ms)", "Max(ms)", "Total(s)", "Leaps", "Peers")
+	fmt.Println(strings.Repeat("-", 140))
+	forEachOrdered(GetAll(), func(typ string, innerMap map[string]*Stat) {
+		forEachOrdered(innerMap, func(name string, st *Stat) {
+			fmt.Printf("%-70s %10.3f %10.3f %10.3f %15s %10d %9d\n",
+				strings.Join([]string{typ, name}, "."), st.GetMinTimeMs(), st.GetAvgTimeMs(), st.GetMaxTimeMs(),
+				time.Duration(st.GetTotalTimeMs())*time.Millisecond, st.GetLeapsCount(), st.GetPeersCount())
+		})
+	})
+}
+
+func forEachOrdered[V any](m map[string]V, fn func(key string, value V)) {
+	keys := make([]string, 0, len(m))
+	for k := range m {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	for _, k := range keys {
+		fn(k, m[k])
+	}
 }

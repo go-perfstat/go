@@ -13,7 +13,7 @@ func TestHashMapBasic(t *testing.T) {
 	// Put / Get
 	m.Put("a", 1)
 	m.Put("b", 2)
-	if val, ok := m.Get("a"); !ok || val != 1 {
+	if val := m.Get("a"); val != 1 {
 		t.Errorf("expected 1, got %v", val)
 	}
 
@@ -26,7 +26,7 @@ func TestHashMapBasic(t *testing.T) {
 	if !m.Replace("a", 10) {
 		t.Errorf("expected Replace to succeed")
 	}
-	if val, _ := m.Get("a"); val != 10 {
+	if val := m.Get("a"); val != 10 {
 		t.Errorf("expected 10 after Replace, got %v", val)
 	}
 
@@ -100,7 +100,7 @@ func TestHashMapConcurrent(t *testing.T) {
 		wg.Add(1)
 		go func(i int) {
 			defer wg.Done()
-			if val, ok := m.Get(i); !ok || val != i*10 {
+			if val := m.Get(i); val != i*10 {
 				t.Errorf("expected key %d to have value %d, got %v", i, i*10, val)
 			}
 		}(i)

@@ -24,91 +24,93 @@ type Stat struct {
 	maxTimeSampleMs      float64
 	maxTimeThresholdMs   float64
 	peersCount           atomic.Int64
+	lastAggregationMs    int64
 }
 
 func newStat(typ, name string) *Stat {
 	return &Stat{typ: typ, name: name}
 }
 
-func (s *Stat) Reset() {
-	s.mu.Lock()
-	defer s.mu.Unlock()
+func (this *Stat) Reset() {
+	this.mu.Lock()
+	defer this.mu.Unlock()
 
-	s.totalTimeNs = 0
-	s.totalTimeThresholdNs = 0
-	s.maxTimeMs = 0
-	s.maxTimeSampleMs = 0
-	s.maxTimeThresholdMs = 0
-	s.minTimeMs = 0
-	s.minTimeSampleMs = 0
-	s.minTimeThresholdMs = 0
-	s.leapsCount = 0
-	s.leapsCountSample = 0
-	s.leapsCountThreshold = 0
+	this.totalTimeNs = 0
+	this.totalTimeThresholdNs = 0
+	this.maxTimeMs = 0
+	this.maxTimeSampleMs = 0
+	this.maxTimeThresholdMs = 0
+	this.minTimeMs = 0
+	this.minTimeSampleMs = 0
+	this.minTimeThresholdMs = 0
+	this.leapsCount = 0
+	this.leapsCountSample = 0
+	this.leapsCountThreshold = 0
+	this.lastAggregationMs = 0
 }
 
-func (s *Stat) GetType() string {
-	return s.typ
+func (this *Stat) GetType() string {
+	return this.typ
 }
 
-func (s *Stat) GetName() string {
-	return s.name
+func (this *Stat) GetName() string {
+	return this.name
 }
 
-func (s *Stat) GetFullName() string {
-	if s.typ == "" {
-		return s.name
+func (this *Stat) GetFullName() string {
+	if this.typ == "" {
+		return this.name
 	}
-	return s.typ + "/" + s.name
+	return this.typ + "/" + this.name
 }
 
-func (s *Stat) GetLeapsCount() int64 {
-	return s.leapsCount
+func (this *Stat) GetLeapsCount() int64 {
+	return this.leapsCount
 }
 
-func (s *Stat) GetLeapsCountSample() int64 {
-	return s.leapsCountSample
+func (this *Stat) GetLeapsCountSample() int64 {
+	return this.leapsCountSample
 }
 
-func (s *Stat) GetTotalTimeMs() float64 {
-	return Round(s.totalTimeNs)
+func (this *Stat) GetTotalTimeMs() float64 {
+	return Round(this.totalTimeNs)
 }
 
-func (s *Stat) GetLeapTimeMs() float64 {
-	return s.leapTimeMs
+func (this *Stat) GetLeapTimeMs() float64 {
+	return this.leapTimeMs
 }
 
-func (s *Stat) GetMinTimeMs() float64 {
-	return s.minTimeMs
+func (this *Stat) GetMinTimeMs() float64 {
+	return this.minTimeMs
 }
 
-func (s *Stat) GetMinTimeSampleMs() float64 {
-	return s.minTimeSampleMs
+func (this *Stat) GetMinTimeSampleMs() float64 {
+	return this.minTimeSampleMs
 }
 
-func (s *Stat) GetMaxTimeMs() float64 {
-	return s.maxTimeMs
+func (this *Stat) GetMaxTimeMs() float64 {
+	return this.maxTimeMs
 }
 
-func (s *Stat) GetMaxTimeSampleMs() float64 {
-	return s.maxTimeSampleMs
+func (this *Stat) GetMaxTimeSampleMs() float64 {
+	return this.maxTimeSampleMs
 }
 
-func (s *Stat) GetAvgTimeMs() float64 {
-	if s.leapsCount == 0 {
+func (this *Stat) GetAvgTimeMs() float64 {
+	if this.leapsCount == 0 {
 		return 0
 	}
-	return Round(s.totalTimeNs / s.leapsCount)
+	return Round(this.totalTimeNs / this.leapsCount)
 }
 
-func (s *Stat) GetAvgTimeSampleMs() float64 {
-	return s.avgTimeSampleMs
+func (this *Stat) GetAvgTimeSampleMs() float64 {
+	return this.avgTimeSampleMs
 }
 
-func (s *Stat) GetPeersCount() int64 {
-	return s.peersCount.Load()
+func (this *Stat) GetPeersCount() int64 {
+	return this.peersCount.Load()
 }
 
-func (s *Stat) String() string {
-	return fmt.Sprintf("%.2f %.2f %.2f", s.minTimeMs, s.GetAvgTimeMs(), s.maxTimeMs)
+func (this *Stat) String() string {
+	return fmt.Sprintf("%.2f %.2f %.2f", this.minTimeMs, this.GetAvgTimeMs(), this.maxTimeMs)
 }

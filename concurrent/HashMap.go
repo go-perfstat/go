@@ -34,26 +34,42 @@ func NewHashMap[K comparable, V any]() *HashMap[K, V] {
 }
 
 func (m *HashMap[K, V]) ContainsKey(key K) bool {
-	_, ok := m.Get(key)
-	return ok
-}
-
-func (m *HashMap[K, V]) Get(key K) (V, bool) {
 	b := m.getBucket(key)
 	b.mu.RLock()
 	defer b.mu.RUnlock()
-	val, ok := b.data[key]
-	return val, ok
+	_, ok := b.data[key]
+	return ok
 }
 
-func (m *HashMap[K, V]) Put(key K, value V) {
+func (m *HashMap[K, V]) Get(key K) V {
+	b := m.getBucket(key)
+	b.mu.RLock()
+	defer b.mu.RUnlock()
+	return b.data[key]
+}
+
+func (m *HashMap[K, V]) GetOrDefault(key K, def V) V {
+	b := m.getBucket(key)
+	b.mu.RLock()
+	defer b.mu.RUnlock()
+	value, ok := b.data[key]
+	if ok {
+		return value
+	} else {
+		return def
+	}
+}
+
+func (m *HashMap[K, V]) Put(key K, value V) V {
 	b := m.getBucket(key)
 	b.mu.Lock()
 	defer b.mu.Unlock()
 	if _, exists := b.data[key]; !exists {
 		m.size.Add(1)
 	}
+	previous, _ := b.data[key]
 	b.data[key] = value
+	return previous
 }
 
 func (m *HashMap[K, V]) PutIfAbsent(key K, value V) V {
@@ -114,12 +130,12 @@ func (m *HashMap[K, V]) Size() int {
 	return int(m.size.Load())
 }
 
-func (m *HashMap[K, V]) IsEmpty() bool {
+func (m *HashMap[K, V]) Empty() bool {
 	return m.size.Load() == 0
 }
 
 func (m *HashMap[K, V]) Keys() []K {
-	keys := make([]K, 0)
+	keys := make([]K, 0, m.Size())
 	for i := 0; i < numBuckets; i++ {
 		b := m.buckets[i]
 		b.mu.RLock()
@@ -132,7 +148,7 @@ func (m *HashMap[K, V]) Keys() []K {
 }
 
 func (m *HashMap[K, V]) Values() []V {
-	values := make([]V, 0)
+	values := make([]V, 0, m.Size())
 	for i := 0; i < numBuckets; i++ {
 		b := m.buckets[i]
 		b.mu.RLock()
