@@ -14,19 +14,29 @@ import (
 var defaultAggregationPeriodMs int64 = 15000
 var stats = concurrent.NewHashMap[string, *concurrent.HashMap[string, *Stat]]()
 
-// Record/calculate performance statistic for aggregation period and grand total.
+// Record and aggregate performance statistics such as execution time,
+// min/max duration, average duration, and leap count.
 //
-// Create an instance per component
+// Create a dedicated Stat instance per component, subsystem, or operation.
 //
 //	perf := perfstat.ForName("domain")
 //
-// Use in method
+// Measure local execution time:
 //
-//	t := perf.Start()
-//	... calculations
-//	fmt.Printf("%f ms\n", perfstat.Round(perf.Stop(t)))
+//	start := perf.Start()
+//	// ... calculations
+//	fmt.Printf("%.2f ms\n", perfstat.Round(perf.Stop(start)))
 //
-// Once per aggregation time period flush samples somethere for Graphana to pick-up
+// Or use defer:
+//
+//	defer perf.Leap(time.Now())
+//
+// Leap can also be recorded from external/distributed timestamps:
+//
+//	perf.Leap(message.CreatedAt)
+//
+// Periodically export aggregated samples to monitoring systems
+// such as Grafana/Prometheus.
 type PerfStat struct {
 	stat                *Stat
 	aggregationPeriodMs int64
@@ -62,11 +72,7 @@ func ForTypeNamePeriod(typ, name string, period int64) *PerfStat {
 	return perfStat
 }
 
-func (this *PerfStat) Start() time.Time {
-	return time.Now()
-}
-
-func (this *PerfStat) Stop(start time.Time) int64 {
+func (this *PerfStat) Leap(start time.Time) int64 {
 	now := time.Now()
 	timeNs := now.Sub(start).Nanoseconds()
 	timeMs := Round(timeNs)
