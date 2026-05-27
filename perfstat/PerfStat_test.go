@@ -75,7 +75,7 @@ func TestPerfStatConcurrent(t *testing.T) {
 
 func TestPerfStatPerformance(t *testing.T) {
 	t.Skip("for manual run")
-	iterations := 10_000_000
+	iterations := 100_000_000
 
 	benchmark := perfstat.ForName("benchmark")
 	perf := perfstat.ForName("benchmark_test")
@@ -86,5 +86,5 @@ func TestPerfStatPerformance(t *testing.T) {
 		perf.Stop(t)
 	}
 	totalNs := benchmark.Stop(bt)
-	fmt.Printf("Average leap time: %d ns\n", totalNs/int64(iterations)) // ~ 160 ns
+	fmt.Printf("Average leap time: %d ns\n", totalNs/int64(iterations)) // ~ 60 ns
 }

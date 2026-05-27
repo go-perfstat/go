@@ -47,17 +47,28 @@ func (this *Stat) Reset() {
 	this.leapsCountSample = 0
 	this.leapsCountThreshold = 0
 	this.lastAggregationMs = 0
+	this.avgTimeSampleMs = 0
+	this.leapTimeMs = 0
 }
 
 func (this *Stat) GetType() string {
+	this.mu.Lock()
+	defer this.mu.Unlock()
+
 	return this.typ
 }
 
 func (this *Stat) GetName() string {
+	this.mu.Lock()
+	defer this.mu.Unlock()
+
 	return this.name
 }
 
 func (this *Stat) GetFullName() string {
+	this.mu.Lock()
+	defer this.mu.Unlock()
+
 	if this.typ == "" {
 		return this.name
 	}
@@ -65,38 +76,65 @@ func (this *Stat) GetFullName() string {
 }
 
 func (this *Stat) GetLeapsCount() int64 {
+	this.mu.Lock()
+	defer this.mu.Unlock()
+
 	return this.leapsCount
 }
 
 func (this *Stat) GetLeapsCountSample() int64 {
+	this.mu.Lock()
+	defer this.mu.Unlock()
+
 	return this.leapsCountSample
 }
 
 func (this *Stat) GetTotalTimeMs() float64 {
+	this.mu.Lock()
+	defer this.mu.Unlock()
+
 	return Round(this.totalTimeNs)
 }
 
 func (this *Stat) GetLeapTimeMs() float64 {
+	this.mu.Lock()
+	defer this.mu.Unlock()
+
 	return this.leapTimeMs
 }
 
 func (this *Stat) GetMinTimeMs() float64 {
+	this.mu.Lock()
+	defer this.mu.Unlock()
+
 	return this.minTimeMs
 }
 
 func (this *Stat) GetMinTimeSampleMs() float64 {
+	this.mu.Lock()
+	defer this.mu.Unlock()
+
 	return this.minTimeSampleMs
 }
 
 func (this *Stat) GetMaxTimeMs() float64 {
+	this.mu.Lock()
+	defer this.mu.Unlock()
+
 	return this.maxTimeMs
 }
 
 func (this *Stat) GetMaxTimeSampleMs() float64 {
+	this.mu.Lock()
+	defer this.mu.Unlock()
+
 	return this.maxTimeSampleMs
 }
 
 func (this *Stat) GetAvgTimeMs() float64 {
+	this.mu.Lock()
+	defer this.mu.Unlock()
+
 	if this.leapsCount == 0 {
 		return 0
 	}
@@ -104,6 +142,9 @@ func (this *Stat) GetAvgTimeMs() float64 {
 }
 
 func (this *Stat) GetAvgTimeSampleMs() float64 {
+	this.mu.Lock()
+	defer this.mu.Unlock()
+
 	return this.avgTimeSampleMs
 }
 
@@ -112,5 +153,13 @@ func (this *Stat) GetPeersCount() int64 {
 }
 
 func (this *Stat) String() string {
-	return fmt.Sprintf("%.2f %.2f %.2f", this.minTimeMs, this.GetAvgTimeMs(), this.maxTimeMs)
+	this.mu.Lock()
+	defer this.mu.Unlock()
+
+	avgTimeMs := float64(0)
+	if this.leapsCount != 0 {
+		avgTimeMs = Round(this.totalTimeNs / this.leapsCount)
+	}
+
+	return fmt.Sprintf("%.2f %.2f %.2f", this.minTimeMs, avgTimeMs, this.maxTimeMs)
 }
