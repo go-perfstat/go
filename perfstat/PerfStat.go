@@ -233,7 +233,7 @@ func Round(nanos int64) float64 {
 }
 
 func Print() {
-	fmt.Printf("%-70s %10s %10s %10s %15s %10s %9s\n", "Type/Name", "Min(ms)", "Avg(ms)", "Max(ms)", "Total(s)", "Leaps", "Peers")
+	fmt.Printf("%-70s %10s %10s %10s %15s %10s %9s\n", "Type/Name", "Min(ms)", "Avg(ms)", "Max(ms)", "Total", "Leaps", "Peers")
 	fmt.Println(strings.Repeat("-", 140))
 	forEachOrdered(GetAll(), func(typ string, innerMap map[string]*Stat) {
 		forEachOrdered(innerMap, func(name string, st *Stat) {
