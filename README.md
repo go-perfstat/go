@@ -1,7 +1,6 @@
 # go-perfstat
 
 [![Go Reference](https://pkg.go.dev/badge/github.com/go-perfstat/go.svg)](https://pkg.go.dev/github.com/go-perfstat/go)
-[![Go Report Card](https://goreportcard.com/badge/github.com/go-perfstat/go)](https://goreportcard.com/report/github.com/go-perfstat/go)
 [![Release](https://img.shields.io/github/v/release/go-perfstat/go)](https://github.com/go-perfstat/go/releases)
 
 Lightweight performance statistics and execution time aggregation for Go.
