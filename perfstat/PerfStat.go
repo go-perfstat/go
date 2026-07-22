@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/go-perfstat/go/concurrent"
+	"github.com/go-jang/go/util/concurrent"
 )
 
 var defaultAggregationPeriodMs int64 = 15000
