@@ -3,7 +3,7 @@ module github.com/go-perfstat/go
 go 1.26.2
 
 require (
-	github.com/go-jang/go v1.0.0
+	github.com/go-jang/go v1.0.1
 	github.com/stretchr/testify v1.11.1
 )
 
