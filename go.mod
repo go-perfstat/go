@@ -3,13 +3,13 @@ module github.com/go-perfstat/go
 go 1.26.2
 
 require (
-	github.com/go-jang/go v1.0.1
+	github.com/go-jang/go v1.0.4
 	github.com/stretchr/testify v1.11.1
 )
 
 require (
 	github.com/davecgh/go-spew v1.1.1 // indirect
-	github.com/go-errr/go v1.0.13 // indirect
+	github.com/go-errr/go v1.0.14 // indirect
 	github.com/kr/pretty v0.3.1 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/rogpeppe/go-internal v1.10.0 // indirect
